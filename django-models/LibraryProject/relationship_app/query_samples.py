@@ -2,7 +2,7 @@ import os
 import django
 
 # Set up Django environment
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "your_project_name.settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "LibraryProject.settings")  # Change 'LibraryProject' to your actual project name
 django.setup()
 
 from relationship_app.models import Author, Book, Library, Librarian
@@ -11,7 +11,7 @@ from relationship_app.models import Author, Book, Library, Librarian
 def get_books_by_author(author_name):
     try:
         author = Author.objects.get(name=author_name)
-        books = author.books.all()  # Using related_name in ForeignKey
+        books = Book.objects.filter(author=author)  # Corrected query
         return [book.title for book in books]
     except Author.DoesNotExist:
         return f"Author '{author_name}' not found."
