@@ -5,7 +5,7 @@ from .models import Book, Library  # Ensure both models are imported
 # Function-based view to list all books
 def book_list(request):
     Books = Book.objects.all()  # Fetch all books from the database
-    return render(request, 'relationship_app/book_list.html', {'books': books})  # Ensure this template exists
+    return render(request, 'relationship_app/list_books.html', {'books': books})  # Ensure this template exists
 
 # Class-based view to display details of a specific library
 class LibraryDetailView(DetailView):
