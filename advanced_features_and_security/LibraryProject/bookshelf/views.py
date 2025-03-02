@@ -1,33 +1,77 @@
-from django.contrib.auth.decorators import permission_required
-from django.shortcuts import render, get_object_or_404, redirect
+# bookshelf/views.py
+
+from django.shortcuts import render, redirect
+from django.http import HttpResponse
+from .forms import ExampleForm  # Ensure ExampleForm is imported
 from .models import Book
 
-@permission_required('bookshelf.can_view', raise_exception=True)
+def submit_book(request):
+    """
+    View to handle the form submission for adding a new book to the library.
+    This view ensures that user inputs are validated and secure.
+    """
+
+    if request.method == 'POST':
+        form = ExampleForm(request.POST, request.FILES)
+        if form.is_valid():
+            # Process the cleaned data from the form
+            title = form.cleaned_data['title']
+            author = form.cleaned_data['author']
+            cover = form.cleaned_data['cover']
+
+            # Optionally, you could save this data to the database (for example, to create a new Book object)
+            # You can add logic for saving a Book object here
+            Book.objects.create(title=title, author=author, cover=cover)
+
+            # Redirect to the book list page after successfully saving the book
+            return redirect('book_list')  # Make sure 'book_list' URL name is defined in urls.py
+        else:
+            # If the form is invalid, render it again with errors
+            return render(request, 'bookshelf/form_example.html', {'form': form})
+    else:
+        # If the method is GET, initialize an empty form
+        form = ExampleForm()
+
+    # Render the form for the user to fill out
+    return render(request, 'bookshelf/form_example.html', {'form': form})
+
 def book_list(request):
-    """View that allows only users with 'can_view' permission to see books."""
-    books = Book.objects.all()
+    """
+    View to display the list of books in the library.
+    Fetches all books from the database and passes them to the template.
+    """
+
+    books = Book.objects.all()  # Get all books in the library
     return render(request, 'bookshelf/book_list.html', {'books': books})
 
-@permission_required('bookshelf.can_create', raise_exception=True)
-def book_create(request):
-    """View to create a book, restricted to users with 'can_create' permission."""
-    if request.method == "POST":
-        # Handle book creation logic
-        pass
-    return render(request, 'bookshelf/book_form.html')
+def edit_book(request, book_id):
+    """
+    View to handle the editing of an existing book.
+    """
+    try:
+        book = Book.objects.get(id=book_id)
+    except Book.DoesNotExist:
+        return HttpResponse("Book not found", status=404)
 
-@permission_required('bookshelf.can_edit', raise_exception=True)
-def book_edit(request, book_id):
-    """View to edit books, restricted to users with 'can_edit' permission."""
-    book = get_object_or_404(Book, id=book_id)
-    if request.method == "POST":
-        # Handle book update logic
-        pass
-    return render(request, 'bookshelf/book_form.html', {'book': book})
+    if request.method == 'POST':
+        form = ExampleForm(request.POST, request.FILES, instance=book)
+        if form.is_valid():
+            form.save()  # Save the updated book object
+            return redirect('book_list')
+        else:
+            return render(request, 'bookshelf/form_example.html', {'form': form})
+    else:
+        form = ExampleForm(instance=book)
 
-@permission_required('bookshelf.can_delete', raise_exception=True)
-def book_delete(request, book_id):
-    """View to delete books, restricted to users with 'can_delete' permission."""
-    book = get_object_or_404(Book, id=book_id)
-    book.delete()
-    return redirect('book_list')
+    return render(request, 'bookshelf/form_example.html', {'form': form, 'book': book})
+
+def delete_book(request, book_id):
+    """
+    View to handle the deletion of a book.
+    """
+    try:
+        book = Book.objects.get(id=book_id)
+        book.delete()  # Delete the book from the database
+        return redirect('book_list')
+    except Book.DoesNotExist:
+        return HttpResponse("Book not found", status=404)
