@@ -5,31 +5,29 @@ from .models import Book
 from django.core.exceptions import ValidationError
 import re
 
-class BookForm(forms.ModelForm):
-    """Form to create or edit Book instances."""
+class ExampleForm(forms.Form):
+    """A generic form for handling user input."""
 
-    class Meta:
-        model = Book
-        fields = ['title', 'author', 'cover']
+    title = forms.CharField(max_length=200, required=True, label="Book Title")
+    author = forms.CharField(max_length=100, required=True, label="Author Name")
+    cover = forms.ImageField(required=False, label="Book Cover")
 
     def clean_title(self):
-        """Ensure the book title is safe and doesn't contain dangerous characters."""
+        """Validate the title to avoid XSS or other dangerous characters."""
         title = self.cleaned_data.get('title')
-        # Basic validation for dangerous characters
         if re.search(r'[<>\"\'%&]', title):
             raise ValidationError('Title contains invalid characters.')
         return title
 
     def clean_author(self):
-        """Ensure the author's name is safe."""
+        """Validate the author's name to avoid XSS or other dangerous characters."""
         author = self.cleaned_data.get('author')
-        # Basic validation for dangerous characters
         if re.search(r'[<>\"\'%&]', author):
             raise ValidationError('Author contains invalid characters.')
         return author
 
     def clean_cover(self):
-        """Ensure uploaded cover is a valid image file."""
+        """Ensure that only valid image files are uploaded for the cover."""
         cover = self.cleaned_data.get('cover')
         if cover:
             if not cover.name.endswith(('jpg', 'jpeg', 'png', 'gif')):
