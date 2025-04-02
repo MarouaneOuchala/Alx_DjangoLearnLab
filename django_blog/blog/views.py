@@ -9,6 +9,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.http import JsonResponse
 from .forms import UserRegistrationForm, UserProfileForm, PostForm, CommentForm
 from .models import Post, Comment
+from django.db.models import Q
 
 # Create your views here.
 
@@ -49,10 +50,25 @@ def logout_view(request):
 # Blog Post Views
 class PostListView(ListView):
     model = Post
-    template_name = 'blog/post_list.html'
+    template_name = 'blog/home.html'
     context_object_name = 'posts'
-    ordering = ['-created_date']
-    paginate_by = 10
+    ordering = ['-date_posted']
+    paginate_by = 5
+
+    def get_queryset(self):
+        query = self.request.GET.get('q')
+        if query:
+            return Post.objects.filter(
+                Q(title__icontains=query) |
+                Q(content__icontains=query) |
+                Q(tags__name__icontains=query)
+            ).distinct().order_by('-date_posted')
+        return Post.objects.all().order_by('-date_posted')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['search_query'] = self.request.GET.get('q', '')
+        return context
 
 class PostDetailView(DetailView):
     model = Post
@@ -171,3 +187,18 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
 
     def get_success_url(self):
         return reverse_lazy('post_detail', kwargs={'pk': self.kwargs['pk']})
+
+class TaggedPostListView(ListView):
+    model = Post
+    template_name = 'blog/tagged_posts.html'
+    context_object_name = 'posts'
+    paginate_by = 5
+
+    def get_queryset(self):
+        tag = self.kwargs.get('tag')
+        return Post.objects.filter(tags__name__in=[tag]).distinct().order_by('-date_posted')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['tag'] = self.kwargs.get('tag')
+        return context
