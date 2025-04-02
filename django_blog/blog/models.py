@@ -8,6 +8,7 @@ class Post(models.Model):
     title = models.CharField(max_length=100)
     content = models.TextField()
     date_posted = models.DateTimeField(default=timezone.now)
+    published_date = models.DateTimeField(null=True, blank=True)
     author = models.ForeignKey(User, on_delete=models.CASCADE)
     tags = TaggableManager()
     created_date = models.DateTimeField(auto_now_add=True)
@@ -21,6 +22,10 @@ class Post(models.Model):
 
     def get_absolute_url(self):
         return reverse('post_detail', kwargs={'pk': self.pk})
+
+    def publish(self):
+        self.published_date = timezone.now()
+        self.save()
 
 class Comment(models.Model):
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')
