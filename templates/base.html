@@ -26,12 +26,22 @@
     </header>
 
     <main>
+        {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                    <div class="message {{ message.tags }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
         {% block content %}
         {% endblock %}
     </main>
 
     <footer>
-        <p>&copy; {% now "Y" %} Django Blog. All rights reserved.</p>
+        <p>&copy; 2024 Django Blog. All rights reserved.</p>
     </footer>
 
     <script src="{% static 'blog/js/main.js' %}"></script>

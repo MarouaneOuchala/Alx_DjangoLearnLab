@@ -1,6 +1,5 @@
-// Wait for the DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', function() {
-    // Add smooth scrolling to all links
+    // Smooth scrolling for anchor links
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
             e.preventDefault();
@@ -10,7 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Add fade-out effect to messages
+    // Fade out messages after 5 seconds
     const messages = document.querySelectorAll('.message');
     messages.forEach(message => {
         setTimeout(() => {
@@ -18,6 +17,6 @@ document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => {
                 message.remove();
             }, 500);
-        }, 3000);
+        }, 5000);
     });
 }); 
