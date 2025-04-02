@@ -10,6 +10,7 @@ from django.http import JsonResponse
 from .forms import UserRegistrationForm, UserProfileForm, PostForm, CommentForm
 from .models import Post, Comment
 from django.db.models import Q
+from taggit.models import Tag
 
 # Create your views here.
 
@@ -68,6 +69,23 @@ class PostListView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['search_query'] = self.request.GET.get('q', '')
+        return context
+
+class PostByTagListView(ListView):
+    model = Post
+    template_name = 'blog/posts_by_tag.html'
+    context_object_name = 'posts'
+    paginate_by = 5
+
+    def get_queryset(self):
+        tag_slug = self.kwargs.get('tag_slug')
+        tag = get_object_or_404(Tag, slug=tag_slug)
+        return Post.objects.filter(tags=tag).order_by('-date_posted')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tag_slug = self.kwargs.get('tag_slug')
+        context['tag'] = get_object_or_404(Tag, slug=tag_slug)
         return context
 
 class PostDetailView(DetailView):
