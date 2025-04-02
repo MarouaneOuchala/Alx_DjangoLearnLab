@@ -6,8 +6,9 @@ from django.contrib.auth.views import LoginView
 from django.urls import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.http import JsonResponse
 from .forms import UserRegistrationForm, UserProfileForm, PostForm
-from .models import Post
+from .models import Post, Comment
 
 # Create your views here.
 
@@ -57,6 +58,31 @@ class PostDetailView(DetailView):
     model = Post
     template_name = 'blog/post_detail.html'
     context_object_name = 'post'
+
+    def post(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({'error': 'Please login to comment'}, status=401)
+        
+        post = self.get_object()
+        content = request.POST.get('content')
+        
+        if not content:
+            return JsonResponse({'error': 'Comment content is required'}, status=400)
+        
+        comment = Comment.objects.create(
+            post=post,
+            author=request.user,
+            content=content
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'comment': {
+                'content': comment.content,
+                'author': comment.author.username,
+                'created_date': comment.created_date.strftime('%B %d, %Y')
+            }
+        })
 
 class PostCreateView(LoginRequiredMixin, CreateView):
     model = Post
