@@ -3,16 +3,11 @@ from .models import Author, Book
 
 @admin.register(Author)
 class AuthorAdmin(admin.ModelAdmin):
-    list_display = ('name', 'get_book_count')
+    list_display = ('name',)
     search_fields = ('name',)
-    
-    def get_book_count(self, obj):
-        return obj.books.count()
-    get_book_count.short_description = 'Number of Books'
 
 @admin.register(Book)
 class BookAdmin(admin.ModelAdmin):
     list_display = ('title', 'author', 'publication_year')
-    list_filter = ('publication_year', 'author')
+    list_filter = ('author', 'publication_year')
     search_fields = ('title', 'author__name')
-    list_select_related = ('author',) 
