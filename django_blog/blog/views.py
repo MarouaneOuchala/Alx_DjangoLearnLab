@@ -7,7 +7,7 @@ from django.urls import reverse_lazy
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.http import JsonResponse
-from .forms import UserRegistrationForm, UserProfileForm, PostForm
+from .forms import UserRegistrationForm, UserProfileForm, PostForm, CommentForm
 from .models import Post, Comment
 
 # Create your views here.
@@ -59,30 +59,37 @@ class PostDetailView(DetailView):
     template_name = 'blog/post_detail.html'
     context_object_name = 'post'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['comment_form'] = CommentForm()
+        return context
+
     def post(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
             return JsonResponse({'error': 'Please login to comment'}, status=401)
         
         post = self.get_object()
-        content = request.POST.get('content')
+        form = CommentForm(request.POST)
         
-        if not content:
-            return JsonResponse({'error': 'Comment content is required'}, status=400)
-        
-        comment = Comment.objects.create(
-            post=post,
-            author=request.user,
-            content=content
-        )
-        
-        return JsonResponse({
-            'success': True,
-            'comment': {
-                'content': comment.content,
-                'author': comment.author.username,
-                'created_date': comment.created_date.strftime('%B %d, %Y')
-            }
-        })
+        if form.is_valid():
+            comment = form.save(commit=False)
+            comment.post = post
+            comment.author = request.user
+            comment.save()
+            
+            return JsonResponse({
+                'success': True,
+                'comment': {
+                    'id': comment.id,
+                    'content': comment.content,
+                    'author': comment.author.username,
+                    'created_at': comment.created_at.strftime('%B %d, %Y'),
+                    'can_edit': True,
+                    'can_delete': True
+                }
+            })
+        else:
+            return JsonResponse({'error': 'Invalid comment data'}, status=400)
 
 class PostCreateView(LoginRequiredMixin, CreateView):
     model = Post
@@ -120,4 +127,33 @@ class PostDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
 
     def delete(self, request, *args, **kwargs):
         messages.success(request, 'Your post has been deleted!')
+        return super().delete(request, *args, **kwargs)
+
+class CommentUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    model = Comment
+    form_class = CommentForm
+    template_name = 'blog/comment_form.html'
+
+    def test_func(self):
+        comment = self.get_object()
+        return comment.can_edit(self.request.user)
+
+    def form_valid(self, form):
+        form.save()
+        messages.success(self.request, 'Comment updated successfully.')
+        return redirect('post_detail', pk=form.instance.post.pk)
+
+class CommentDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+    model = Comment
+    template_name = 'blog/comment_confirm_delete.html'
+
+    def test_func(self):
+        comment = self.get_object()
+        return comment.can_delete(self.request.user)
+
+    def get_success_url(self):
+        return reverse_lazy('post_detail', kwargs={'pk': self.object.post.pk})
+
+    def delete(self, request, *args, **kwargs):
+        messages.success(request, 'Comment deleted successfully.')
         return super().delete(request, *args, **kwargs)

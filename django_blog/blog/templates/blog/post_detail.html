@@ -9,6 +9,9 @@
         <div class="post-meta">
             <span>By {{ post.author.username }}</span>
             <span>{{ post.created_date|date:"F j, Y" }}</span>
+            {% if post.updated_date != post.created_date %}
+                <span>Updated: {{ post.updated_date|date:"F j, Y" }}</span>
+            {% endif %}
         </div>
         <div class="post-content">
             {{ post.content|linebreaks }}
@@ -25,11 +28,9 @@
     <div class="comments-section">
         <h2>Comments</h2>
         {% if user.is_authenticated %}
-            <form method="post" action="{% url 'post_detail' post.pk %}" class="comment-form">
+            <form method="post" class="comment-form" data-post-id="{{ post.pk }}">
                 {% csrf_token %}
-                <div class="form-group">
-                    <textarea name="content" class="form-control" rows="3" placeholder="Write a comment..." required></textarea>
-                </div>
+                {{ comment_form.content }}
                 <button type="submit" class="btn btn-primary">Post Comment</button>
             </form>
         {% else %}
@@ -38,14 +39,23 @@
 
         <div class="comments-list">
             {% for comment in post.comments.all %}
-                <div class="comment">
+                <div class="comment" data-comment-id="{{ comment.id }}">
                     <div class="comment-meta">
                         <span>{{ comment.author.username }}</span>
-                        <span>{{ comment.created_date|date:"F j, Y" }}</span>
+                        <span>{{ comment.created_at|date:"F j, Y" }}</span>
+                        {% if comment.updated_at != comment.created_at %}
+                            <span>Edited: {{ comment.updated_at|date:"F j, Y" }}</span>
+                        {% endif %}
                     </div>
                     <div class="comment-content">
                         {{ comment.content|linebreaks }}
                     </div>
+                    {% if user == comment.author %}
+                        <div class="comment-actions">
+                            <a href="{% url 'comment_update' comment.pk %}" class="btn btn-sm btn-primary">Edit</a>
+                            <a href="{% url 'comment_delete' comment.pk %}" class="btn btn-sm btn-danger">Delete</a>
+                        </div>
+                    {% endif %}
                 </div>
             {% empty %}
                 <p>No comments yet. Be the first to comment!</p>
@@ -53,4 +63,59 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const commentForms = document.querySelectorAll('.comment-form');
+    
+    commentForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const postId = this.dataset.postId;
+            
+            fetch(`/post/${postId}/`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const commentsList = document.querySelector('.comments-list');
+                    const newComment = document.createElement('div');
+                    newComment.className = 'comment';
+                    newComment.dataset.commentId = data.comment.id;
+                    newComment.innerHTML = `
+                        <div class="comment-meta">
+                            <span>${data.comment.author}</span>
+                            <span>${data.comment.created_at}</span>
+                        </div>
+                        <div class="comment-content">
+                            ${data.comment.content}
+                        </div>
+                        <div class="comment-actions">
+                            <a href="/comment/${data.comment.id}/update/" class="btn btn-sm btn-primary">Edit</a>
+                            <a href="/comment/${data.comment.id}/delete/" class="btn btn-sm btn-danger">Delete</a>
+                        </div>
+                    `;
+                    commentsList.insertBefore(newComment, commentsList.firstChild);
+                    this.reset();
+                } else {
+                    alert('Error posting comment: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error posting comment. Please try again.');
+            });
+        });
+    });
+});
+</script>
 {% endblock %} 
