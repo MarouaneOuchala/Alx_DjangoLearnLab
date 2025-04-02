@@ -20,3 +20,4 @@ from django.urls import path
 urlpatterns = [
     path('admin/', admin.site.urls),
 ]
+["post/<int:pk>/delete/", "post/<int:pk>/update/", "post/new/"]
